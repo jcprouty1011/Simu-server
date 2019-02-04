@@ -21,13 +21,14 @@ app.use((req, res, next) => {
   res.set('Access-Control-Allow-Headers', 'content-type');
   next();
 });
+
 app.use(express.json());
 
 app.get('/', (req, res, next) => {
   res.send('Dashboard backend is running on this port.');
 });
 
-app.get('/taskdata', (req, res, next) => {
+app.get('/daytaskdata', (req, res, next) => {
   console.log('Running applescript to update task data.')
   execSync('osascript /Users/jcprouty/scripts/current_task_percentage.scpt');
   console.log('Sending update to the client.');
@@ -39,11 +40,11 @@ app.get('/taskdata', (req, res, next) => {
 
 app.get('/weektaskdata', (req, res, next) => {
   console.log('Sending week\'s task data');
-  const db = new sqlite.Database('/Users/jcprouty/scripts/personaldata.db');
+  const db = new sqlite.Database('../../../scripts/personaldata.db');
   const data = [];
-  db.all('SELECT date, tasks_assigned, tasks_finished, time_assigned, time_finished FROM new_task_scores ORDER BY id DESC LIMIT 7', (error, rows) => {
+  db.all('SELECT date, tasks_assigned, tasks_finished, time_assigned, time_finished, future_completed, future_minutes FROM new_task_scores ORDER BY id DESC LIMIT 7', (error, rows) => {
     rows.forEach(row => {
-      data.push([row.date, row.tasks_assigned, row.tasks_finished, row.time_assigned, row.time_finished]);
+      data.push([row.date, row.tasks_assigned, row.tasks_finished, row.time_assigned, row.time_finished, row.future_completed, row.future_minutes]);
     });
     res.send(JSON.stringify({taskData: data}));
   });
@@ -55,7 +56,7 @@ app.get('/generaldatatypes', (req, res, next) => {
   let removeRows = [];
   const date = new Date();
   const dateString = formatDate(date);
-  //WHERE date=date(\'${dateString}\')
+
   db.get(`SELECT * FROM data_tracking `, (error, row) => {
     if (row) {
       for (let key in row) {
@@ -64,6 +65,7 @@ app.get('/generaldatatypes', (req, res, next) => {
         }
       }
     }
+
     db.all('SELECT data, label FROM data_types', (error, rows) => {
       let keptRows = [];
       for (row of rows) {
@@ -94,7 +96,7 @@ app.post('/postdatum', (req, res, next) => {
       }
     });
   } else {
-    console.log("Failed with this body:");
+    console.log("Failed to post data with this body:");
     console.log(req.body);
     res.status(500).send();
   }
